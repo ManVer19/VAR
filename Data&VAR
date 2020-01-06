@@ -1,0 +1,92 @@
+
+
+clear all
+close all
+clc
+data = xlsread('Exer1new.xls');
+date=data(:,1);
+gdp=data(:,2);
+cons=data(:,3);
+gov=data(:,4);
+consndur=data(:,5);
+defense=data(:,6);
+pop=data(:,7);
+% Generate per capita variables
+gdp_pc=log(gdp./pop);
+cons_pc=log(cons./pop);
+gov_pc=log(gov./pop);
+defense_pc=log(defense./pop);
+consndur_pc=log(consndur./pop);
+
+date=date(5:end,1);
+gdp_pc=gdp_pc(5:end,1);
+cons_pc=cons_pc(5:end,1);
+gov_pc=gov_pc(5:end,1);
+defense_pc=defense_pc(5:end,1);
+consndur_pc=consndur_pc(5:end,1);
+%% Time series of the variables under consideration
+
+figure
+set(gcf,'color','w'); 
+subplot(2,3,1) 
+plot(date,gdp_pc,'LineWidth',2)
+title('GDP')
+subplot(2,3,2) 
+plot(date,cons_pc,'LineWidth',2)
+title('Consumption')
+subplot(2,3,3)
+plot(date,gov_pc,'LineWidth',2)
+title('Spending')
+subplot(2,3,5)
+plot(date,consndur_pc,'LineWidth',2)
+title('Non-durables')
+subplot(2,3,6)
+plot(date,defense_pc,'LineWidth',2)
+title('Defense')
+
+%% VAR  for GDP, consumption, and government spending
+covariates=[ones(length(date),1),date,lagmatrix([gdp_pc cons_pc gov_pc],1:4)];
+% Full sample
+display('Parts (a) and (b) with full sample')
+[Vu,A0]=matricesandgraphs(gdp_pc,cons_pc,gov_pc,covariates,gov,gdp)
+saveas(gcf,'abfs.png')
+% Subsample between 1960 and 2006 (inclusive)
+display('Parts (a) and (b) with 1960-2006 subsample')
+y1960=find(date==1960);
+y2006=find(date==2006.75);
+[Vu,A0]=matricesandgraphs(gdp_pc(y1960:y2006,1),cons_pc(y1960:y2006,1),gov_pc(y1960:y2006,1),covariates(y1960:y2006,:),gov(y1960:y2006,:),gdp(y1960:y2006,:))
+saveas(gcf,'abcs.png')
+
+%% VAR  for GDP, consumption, and defense spending
+covariates=[ones(length(date),1),date,lagmatrix([gdp_pc cons_pc defense_pc],1:4)];
+% Full sample
+display('Part (c) with full sample')
+[Vu,A0]=matricesandgraphs(gdp_pc,cons_pc,defense_pc,covariates,defense,gdp)
+saveas(gcf,'cfs.png')
+% Subsample between 1960 and 2006 (inclusive)
+display('Part (c) with 1960-2006 subsample')
+[Vu,A0]=matricesandgraphs(gdp_pc(y1960:y2006,1),cons_pc(y1960:y2006,1),defense_pc(y1960:y2006,1),covariates(y1960:y2006,:),defense(y1960:y2006,:),gdp(y1960:y2006,:))
+saveas(gcf,'ccs.png')
+
+%% VAR  for GDP, non-durable consumption, and government spending
+covariates=[ones(length(date),1),date,lagmatrix([gdp_pc consndur_pc gov_pc],1:4)];
+% Full sample
+display('Part (d) with full sample')
+[Vu,A0]=matricesandgraphs(gdp_pc,consndur_pc,gov_pc,covariates,gov,gdp)
+saveas(gcf,'dfs.png')
+% Subsample between 1960 and 2006 (inclusive)
+display('Part (d) with 1960-2006 subsample')
+[Vu,A0]=matricesandgraphs(gdp_pc(y1960:y2006,1),consndur_pc(y1960:y2006,1),gov_pc(y1960:y2006,1),covariates(y1960:y2006,:),gov(y1960:y2006,:),gdp(y1960:y2006,:))
+saveas(gcf,'dcs.png')
+
+
+%% VAR for GDP, consumption, and government spending with modified A0
+covariates=[ones(length(date),1),date,lagmatrix([gdp_pc cons_pc gov_pc],1:4)];
+% Full sample
+display('Part (e) with full sample')
+[Vu,A0]=matricesandgraphs_alternative(gdp_pc,cons_pc,gov_pc,covariates,gov,gdp)
+saveas(gcf,'efs.png')
+% Subsample between 1960 and 2006 (inclusive)
+display('Part (e) with 1960-2006 subsample')
+[Vu,A0]=matricesandgraphs_alternative(gdp_pc(y1960:y2006,1),cons_pc(y1960:y2006,1),gov_pc(y1960:y2006,1),covariates(y1960:y2006,:),gov(y1960:y2006,:),gdp(y1960:y2006,:))
+saveas(gcf,'ecs.png')
