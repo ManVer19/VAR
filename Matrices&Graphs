@@ -1,0 +1,83 @@
+function [Vu,A0] = matricesandgraphs(output,consumption,government,covariates,totalgov,totalgdp)
+
+
+output=output(5:end,:);
+consumption=consumption(5:end,:);
+government=government(5:end,:);
+covariates=covariates(5:end,:);
+
+% Regression of gdp on covariates
+beta_reduced_output=regress(output,covariates);
+residuals_output=output-covariates*beta_reduced_output;
+
+% Regression of consumption on covariates
+beta_reduced_cons=regress(consumption,covariates);
+residuals_cons=consumption-covariates*beta_reduced_cons;
+
+% Regression of government spending on covariates
+beta_reduced_gov=regress(government,covariates);
+residuals_gov=government-covariates*beta_reduced_gov;
+
+% Variance-covariance matrix of reduced model residuals
+residuals=[residuals_output residuals_cons residuals_gov];
+Vu=corr(residuals);
+
+
+% Structural regression for output
+beta_structural_output=regress(output,[covariates government]);
+ay=-beta_structural_output(15);
+
+% Structural regression for consumption
+beta_structural_cons=regress(consumption,[covariates government]);
+ac=-beta_structural_cons(15);
+
+% Declaring A0 and its inverse
+A0=[1 0 ay;0 1 ac; 0 0 1];
+A0inv=inv(A0);
+
+% Define inv(A0)*A(L)
+beta_structural=[beta_structural_output(1:14) beta_structural_cons(1:14) beta_reduced_gov]';
+coeff_structural_lag1=inv(A0)*beta_structural(:,3:5); % inv(A0)*A1
+coeff_structural_lag2=inv(A0)*beta_structural(:,6:8); % inv(A0)*A2
+coeff_structural_lag3=inv(A0)*beta_structural(:,9:11); % inv(A0)*A3
+coeff_structural_lag4=inv(A0)*beta_structural(:,12:14); % inv(A0)*A4
+
+% Starting IRFs
+horizon=20; % Set horizon of IRFs
+EPSILON=zeros(3,horizon+5); % Creating matrix containing shocks
+EPSILON(3,5)=1; % Government spending shock at t=0
+X(:,1:4)=zeros(3,4); % GDP, consumption, and spending from -4 to -1
+for i=5:horizon+5 % Here whe obtain the evolution of the variables
+X(:,i)=coeff_structural_lag1*X(:,i-1)+coeff_structural_lag2*X(:,i-2)+coeff_structural_lag3*X(:,i-3)+coeff_structural_lag4*X(:,i-4)+A0inv*EPSILON(:,i);
+end
+
+% Plot graphs
+time=linspace(0,horizon,horizon+1); % Define x axis of the graphs 
+gdp_path=X(1,5:horizon+5); % Path of GDP after the shock
+cons_path=X(2,5:horizon+5); % Path of consumption after the shock
+gov_path=X(3,5:horizon+5); % Path of government spending after the shock
+figure
+set(gcf,'color','w'); % Set the background color of the graphs to white
+subplot(2,2,1) % Simply graph
+plot(time,gdp_path,'LineWidth',2)
+title('GDP')
+hline = refline(0,0);
+hline.Color = 'black';
+subplot(2,2,2)
+plot(time,cons_path,'LineWidth',2)
+title('Consumption')
+hline = refline(0,0);
+hline.Color = 'black';
+subplot(2,2,3)
+plot(time,gov_path,'LineWidth',2)
+title('Government')
+hline = refline(0,0);
+hline.Color = 'black';
+% Multiplier
+
+M=sum(X(1,5)/X(3,5))*(mean(totalgdp)/mean(totalgov));
+fprintf('Impact multiplier=%f3 \n',M);
+
+M=sum(X(1,5:horizon+5)./X(3,5:horizon+5))*(mean(totalgdp)/mean(totalgov));
+fprintf('Present value multiplier=%f3',M);
+end
